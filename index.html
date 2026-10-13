@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0c0e12">
+<title>Fuel — food log</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<style>
+  :root{
+    --bg:#0c0e12; --card:#151922; --card2:#1b2130; --line:#262d3d;
+    --txt:#f2f4f8; --dim:#9aa3b5; --volt:#c6f542; --volt-dim:#a8d63a;
+    --blue:#5eb2ff; --orange:#ff9f5a; --red:#ff6b6b;
+    --radius:16px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;
+    max-width:520px; margin:0 auto; padding:0 16px calc(28px + env(safe-area-inset-bottom));
+    min-height:100vh;
+  }
+  header{padding:calc(14px + env(safe-area-inset-top)) 0 6px; display:flex; align-items:center; justify-content:space-between;}
+  .logo{font-weight:800; font-size:22px; letter-spacing:.5px;}
+  .logo span{color:var(--volt);}
+  .date-nav{display:flex; align-items:center; gap:10px;}
+  .date-nav button{
+    background:var(--card); color:var(--txt); border:1px solid var(--line);
+    width:34px; height:34px; border-radius:10px; font-size:16px; cursor:pointer;
+  }
+  .date-label{font-size:14px; color:var(--dim); min-width:86px; text-align:center; font-weight:600;}
+  .macros{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0;}
+  .macro{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
+  .macro.wide{grid-column:1 / -1;}
+  .macro .lbl{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); font-weight:700;}
+  .macro .vals{font-size:20px; font-weight:800; margin:4px 0 8px;}
+  .macro .vals small{font-size:12px; color:var(--dim); font-weight:600;}
+  .bar{height:8px; background:#0a0c10; border-radius:99px; overflow:hidden;}
+  .bar i{display:block; height:100%; border-radius:99px; width:0%; transition:width .3s;}
+  .bar.cal i{background:var(--volt);}
+  .bar.pro i{background:var(--blue);}
+  .bar.carb i{background:var(--orange);}
+  .bar.fat i{background:var(--red);}
+  .over{color:var(--red) !important;}
+  section{margin-top:18px;}
+  h2{font-size:13px; text-transform:uppercase; letter-spacing:1.2px; color:var(--dim); margin:0 0 10px; font-weight:800;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px;}
+  .row{display:flex; gap:8px;}
+  input,button{font-family:inherit;}
+  input{
+    width:100%; background:#0a0c10; border:1px solid var(--line); color:var(--txt);
+    border-radius:12px; padding:12px; font-size:16px; outline:none;
+  }
+  input:focus{border-color:var(--volt);}
+  .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:8px;}
+  .grid4 label{font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:.6px; font-weight:700; display:block; margin-bottom:4px;}
+  .btn{
+    display:block; width:100%; border:none; border-radius:14px; padding:15px;
+    font-size:16px; font-weight:800; cursor:pointer; margin-top:10px;
+  }
+  .btn-add{background:var(--volt); color:#0c0e12;}
+  .btn-add:active{background:var(--volt-dim);}
+  .btn-share{background:var(--card2); color:var(--txt); border:1px solid var(--line);}
+  .btn-share:active{background:#232b40;}
+  .chips{display:flex; gap:8px; overflow-x:auto; padding:2px 0 6px; scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:0 0 auto; background:var(--card2); border:1px solid var(--line); color:var(--txt);
+    border-radius:99px; padding:9px 14px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+  .chip:active{background:#232b40;}
+  .entry{
+    display:flex; align-items:center; gap:10px; background:var(--card);
+    border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:8px;
+  }
+  .entry .nm{font-weight:700; font-size:15px;}
+  .entry .mk{font-size:12px; color:var(--dim); margin-top:2px;}
+  .entry .del{margin-left:auto; background:none; border:none; color:var(--dim); font-size:18px; cursor:pointer; padding:6px;}
+  .entry .del:active{color:var(--red);}
+  .empty{color:var(--dim); text-align:center; padding:18px 0; font-size:14px;}
+  .settings-row{display:flex; gap:8px; margin-bottom:8px;}
+  .settings-row .fld{flex:1;}
+  .settings-row label{font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:.6px; font-weight:700; display:block; margin-bottom:4px;}
+  .toast{
+    position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px);
+    background:var(--volt); color:#0c0e12; font-weight:800; font-size:14px;
+    padding:12px 20px; border-radius:99px; opacity:0; pointer-events:none; transition:all .25s;
+    max-width:90%; text-align:center; z-index:50;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.78); display:flex; align-items:flex-end; justify-content:center; z-index:100;}
+  .sheet{background:var(--card); border:1px solid var(--line); border-radius:20px 20px 0 0; width:100%; max-width:520px; max-height:88vh; overflow-y:auto; padding:16px 16px calc(20px + env(safe-area-inset-bottom));}
+  .sheet-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .x{background:var(--card2); border:1px solid var(--line); color:var(--txt); width:32px; height:32px; border-radius:10px; font-size:14px; cursor:pointer;}
+  .status{color:var(--dim); font-size:13px; margin-bottom:8px; text-align:center;}
+  #reader{border-radius:14px; overflow:hidden; background:#000; min-height:120px;}
+  #reader video{border-radius:14px;}
+  .photobtn{display:block; text-align:center; margin-top:10px; color:var(--dim); font-size:13px; font-weight:700; padding:10px; cursor:pointer;}
+  .pname{font-weight:800; font-size:17px; margin:10px 0 2px; text-align:center;}
+  .punit{color:var(--dim); font-size:12px; text-align:center; margin-bottom:10px; line-height:1.6;}
+  .pmacros{text-align:center; font-weight:800; font-size:16px; margin-bottom:12px;}
+  .qtyrow{display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:6px;}
+  .qtyrow button{width:44px; height:44px; border-radius:12px; background:var(--card2); border:1px solid var(--line); color:var(--txt); font-size:20px; cursor:pointer;}
+  #qVal{font-size:20px; font-weight:800; min-width:44px; text-align:center;}
+  .spin{width:28px; height:28px; border:3px solid var(--line); border-top-color:var(--volt); border-radius:50%; margin:18px auto 0; animation:sp .8s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+  .airow{background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; font-size:14px;}
+  .aimk{font-size:12px; color:var(--dim); margin-top:2px;}
+  details{margin-top:14px;}
+  summary{color:var(--dim); font-size:13px; font-weight:700; cursor:pointer; padding:6px 0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">FUEL<span>⚡</span></div>
+  <div class="date-nav">
+    <button id="prevDay" aria-label="previous day">‹</button>
+    <div class="date-label" id="dateLabel">Today</div>
+    <button id="nextDay" aria-label="next day">›</button>
+  </div>
+</header>
+
+<div class="macros">
+  <div class="macro wide">
+    <div class="lbl">Calories</div>
+    <div class="vals"><span id="vCal">0</span> <small>/ <span id="tCal">1875</span></small></div>
+    <div class="bar cal"><i id="bCal"></i></div>
+  </div>
+  <div class="macro">
+    <div class="lbl">Protein</div>
+    <div class="vals"><span id="vPro">0</span><small>g / <span id="tPro">102</span>g</small></div>
+    <div class="bar pro"><i id="bPro"></i></div>
+  </div>
+  <div class="macro">
+    <div class="lbl">Carbs</div>
+    <div class="vals"><span id="vCarb">0</span><small>g / <span id="tCarb">262</span>g</small></div>
+    <div class="bar carb"><i id="bCarb"></i></div>
+  </div>
+  <div class="macro">
+    <div class="lbl">Fat</div>
+    <div class="vals"><span id="vFat">0</span><small>g / <span id="tFat">45</span>g</small></div>
+    <div class="bar fat"><i id="bFat"></i></div>
+  </div>
+</div>
+
+<section>
+  <h2>Log food</h2>
+  <div class="card">
+    <input id="fName" type="text" placeholder="What did you eat?" autocomplete="off" enterkeyhint="next">
+    <div class="grid4">
+      <div><label>Cal</label><input id="fCal" type="number" inputmode="decimal" placeholder="0" min="0"></div>
+      <div><label>Protein</label><input id="fPro" type="number" inputmode="decimal" placeholder="0" min="0"></div>
+      <div><label>Carbs</label><input id="fCarb" type="number" inputmode="decimal" placeholder="0" min="0"></div>
+      <div><label>Fat</label><input id="fFat" type="number" inputmode="decimal" placeholder="0" min="0"></div>
+    </div>
+    <button class="btn btn-add" id="addBtn">Add</button>
+    <button class="btn btn-share" id="scanBtn" style="margin-top:8px">📷 Scan barcode</button>
+    <button class="btn btn-share" id="aiBtn" style="margin-top:8px">✨ AI photo macros</button>
+    <input type="file" id="aiFile" accept="image/*" capture="environment" style="display:none">
+  </div>
+</section>
+
+<section id="recentSec" style="display:none">
+  <h2>Recent</h2>
+  <div class="chips" id="recentChips"></div>
+</section>
+
+<section>
+  <h2>Today's entries</h2>
+  <div id="entries"></div>
+</section>
+
+<section>
+  <button class="btn btn-share" id="shareBtn">📤 Send day to hedwig</button>
+</section>
+
+<details id="settingsDetails">
+  <summary>⚙ Daily targets</summary>
+  <div class="card" style="margin-top:8px">
+    <div class="settings-row">
+      <div class="fld"><label>Calories</label><input id="sCal" type="number" inputmode="numeric" min="0"></div>
+      <div class="fld"><label>Protein g</label><input id="sPro" type="number" inputmode="numeric" min="0"></div>
+    </div>
+    <div class="settings-row">
+      <div class="fld"><label>Carbs g</label><input id="sCarb" type="number" inputmode="numeric" min="0"></div>
+      <div class="fld"><label>Fat g</label><input id="sFat" type="number" inputmode="numeric" min="0"></div>
+    </div>
+    <button class="btn btn-add" id="saveTargets" style="padding:12px; font-size:14px;">Save targets</button>
+    <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--line)">
+      <div class="settings-row">
+        <div class="fld"><label>Gemini API key (for ✨ AI photo)</label><input id="sKey" type="password" placeholder="paste key here" autocomplete="off"></div>
+      </div>
+      <div style="font-size:12px;color:var(--dim);line-height:1.6;margin:6px 0 8px">Free key: go to <b>aistudio.google.com</b> → Get API key → Create API key, then paste it here. The key never leaves your phone — photos go to Google for analysis.</div>
+      <button class="btn btn-add" id="saveKey" style="padding:12px; font-size:14px;">Save key</button>
+    </div>
+  </div>
+</details>
+
+<div class="modal" id="scanModal" style="display:none">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div style="font-weight:800" id="sheetTitle">Scan barcode</div>
+      <button class="x" id="scanClose" aria-label="close">✕</button>
+    </div>
+    <div id="scanStatus" class="status">Loading camera…</div>
+    <div id="reader"></div>
+    <div id="scanResult" style="display:none"></div>
+    <label class="photobtn">📷 Or take a photo of the barcode instead
+      <input type="file" id="scanFile" accept="image/*" capture="environment" style="display:none">
+    </label>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var LS_KEY = "fuel_log_v1";
+
+  function todayKey(d){
+    d = d || new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
+    catch(e){ return {}; }
+  }
+  function save(db){ localStorage.setItem(LS_KEY, JSON.stringify(db)); }
+  function getTargets(db){
+    return db.targets || { cal:1875, pro:102, carb:262, fat:45 };
+  }
+
+  var db = load();
+  var viewDate = new Date();
+
+  var $ = function(id){ return document.getElementById(id); };
+  var els = {
+    dateLabel:$("dateLabel"), vCal:$("vCal"), vPro:$("vPro"), vCarb:$("vCarb"), vFat:$("vFat"),
+    tCal:$("tCal"), tPro:$("tPro"), tCarb:$("tCarb"), tFat:$("tFat"),
+    bCal:$("bCal"), bPro:$("bPro"), bCarb:$("bCarb"), bFat:$("bFat"),
+    fName:$("fName"), fCal:$("fCal"), fPro:$("fPro"), fCarb:$("fCarb"), fFat:$("fFat"),
+    entries:$("entries"), recentSec:$("recentSec"), recentChips:$("recentChips"), toast:$("toast")
+  };
+
+  function toast(msg){
+    els.toast.textContent = msg;
+    els.toast.classList.add("show");
+    setTimeout(function(){ els.toast.classList.remove("show"); }, 2200);
+  }
+
+  function dayEntries(){
+    var k = todayKey(viewDate);
+    db.days = db.days || {};
+    return db.days[k] || [];
+  }
+  function setDayEntries(list){
+    db.days = db.days || {};
+    db.days[todayKey(viewDate)] = list;
+    save(db);
+  }
+
+  function totals(){
+    var t = {cal:0, pro:0, carb:0, fat:0};
+    dayEntries().forEach(function(e){
+      t.cal += +e.cal||0; t.pro += +e.pro||0; t.carb += +e.carb||0; t.fat += +e.fat||0;
+    });
+    return t;
+  }
+
+  function fmtDate(d){
+    var tk = todayKey(), vk = todayKey(d);
+    if(vk === tk) return "Today";
+    var y = new Date(); y.setDate(y.getDate()-1);
+    if(vk === todayKey(y)) return "Yesterday";
+    return d.toLocaleDateString(undefined,{weekday:"short", month:"short", day:"numeric"});
+  }
+
+  function render(){
+    var t = getTargets(db), s = totals();
+    els.dateLabel.textContent = fmtDate(viewDate);
+    els.tCal.textContent = t.cal; els.tPro.textContent = t.pro;
+    els.tCarb.textContent = t.carb; els.tFat.textContent = t.fat;
+    els.vCal.textContent = Math.round(s.cal);
+    els.vPro.textContent = Math.round(s.pro);
+    els.vCarb.textContent = Math.round(s.carb);
+    els.vFat.textContent = Math.round(s.fat);
+    setBar(els.bCal, s.cal, t.cal, els.vCal);
+    setBar(els.bPro, s.pro, t.pro, els.vPro);
+    setBar(els.bCarb, s.carb, t.carb, els.vCarb);
+    setBar(els.bFat, s.fat, t.fat, els.vFat);
+    renderEntries();
+    renderRecent();
+    $("sCal").value = t.cal; $("sPro").value = t.pro;
+    $("sCarb").value = t.carb; $("sFat").value = t.fat;
+    if($("sKey")) $("sKey").value = (db.settings && db.settings.geminiKey) || "";
+  }
+  function setBar(bar, val, target, valEl){
+    var pct = target > 0 ? Math.min(100, val/target*100) : 0;
+    bar.style.width = pct + "%";
+    valEl.classList.toggle("over", target > 0 && val > target);
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+  function renderEntries(){
+    var list = dayEntries();
+    if(!list.length){
+      els.entries.innerHTML = '<div class="empty">Nothing logged yet today.</div>';
+      return;
+    }
+    els.entries.innerHTML = list.map(function(e){
+      return '<div class="entry" data-id="'+e.id+'">'+
+        '<div><div class="nm">'+esc(e.name)+'</div>'+
+        '<div class="mk">'+Math.round(e.cal)+' cal · '+Math.round(e.pro)+'p / '+Math.round(e.carb)+'c / '+Math.round(e.fat)+'f</div></div>'+
+        '<button class="del" data-del="'+e.id+'" aria-label="delete">×</button></div>';
+    }).join("");
+  }
+
+  function renderRecent(){
+    var seen = {}, out = [];
+    Object.keys(db.days||{}).sort().reverse().forEach(function(k){
+      (db.days[k]||[]).forEach(function(e){
+        var key = (e.name||"").toLowerCase().trim();
+        if(key && !seen[key]){ seen[key]=1; out.push(e); }
+      });
+    });
+    out = out.slice(0, 12);
+    if(!out.length){ els.recentSec.style.display = "none"; return; }
+    els.recentSec.style.display = "";
+    els.recentChips.innerHTML = out.map(function(e, i){
+      return '<button class="chip" data-recent="'+i+'">+ '+esc(e.name)+'</button>';
+    }).join("");
+    els.recentChips.querySelectorAll("[data-recent]").forEach(function(btn){
+      btn.onclick = function(){
+        var e = out[+btn.getAttribute("data-recent")];
+        addEntry(e.name, e.cal, e.pro, e.carb, e.fat);
+      };
+    });
+  }
+
+  function addEntry(name, cal, pro, carb, fat){
+    name = (name||"").trim();
+    if(!name){ toast("Give it a name first"); els.fName.focus(); return; }
+    var list = dayEntries();
+    list.push({ id:"e"+Date.now()+Math.floor(Math.random()*999),
+      name:name, cal:+cal||0, pro:+pro||0, carb:+carb||0, fat:+fat||0,
+      at:new Date().toISOString() });
+    setDayEntries(list);
+    els.fName.value = ""; els.fCal.value = ""; els.fPro.value = "";
+    els.fCarb.value = ""; els.fFat.value = "";
+    render();
+    toast("Logged ✓");
+  }
+
+  $("addBtn").onclick = function(){
+    addEntry(els.fName.value, els.fCal.value, els.fPro.value, els.fCarb.value, els.fFat.value);
+  };
+  els.fName.addEventListener("keydown", function(e){ if(e.key === "Enter") $("addBtn").click(); });
+
+  els.entries.addEventListener("click", function(e){
+    var b = e.target.closest("[data-del]");
+    if(!b) return;
+    var id = b.getAttribute("data-del");
+    setDayEntries(dayEntries().filter(function(x){ return x.id !== id; }));
+    render();
+  });
+
+  $("prevDay").onclick = function(){ viewDate.setDate(viewDate.getDate()-1); render(); };
+  $("nextDay").onclick = function(){ viewDate.setDate(viewDate.getDate()+1); render(); };
+
+  $("saveTargets").onclick = function(){
+    db.targets = {
+      cal: +$("sCal").value || 0, pro: +$("sPro").value || 0,
+      carb: +$("sCarb").value || 0, fat: +$("sFat").value || 0
+    };
+    save(db); render(); toast("Targets saved ✓");
+  };
+
+  function shareText(){
+    var t = getTargets(db), s = totals();
+    var dstr = viewDate.toLocaleDateString(undefined,{weekday:"short", month:"short", day:"numeric"});
+    var lines = ["Fuel log — " + dstr,
+      "Targets: " + t.cal + " cal · " + t.pro + "p / " + t.carb + "c / " + t.fat + "f", ""];
+    var list = dayEntries();
+    if(!list.length) lines.push("(nothing logged)");
+    list.forEach(function(e){
+      lines.push("• " + e.name + " — " + Math.round(e.cal) + " cal (" +
+        Math.round(e.pro) + "p/" + Math.round(e.carb) + "c/" + Math.round(e.fat) + "f)");
+    });
+    lines.push("", "Total: " + Math.round(s.cal) + " cal (" +
+      Math.round(s.pro) + "p/" + Math.round(s.carb) + "c/" + Math.round(s.fat) + "f)");
+    return lines.join("\n");
+  }
+
+  $("shareBtn").onclick = function(){
+    var text = shareText();
+    if(navigator.share){
+      navigator.share({ text:text }).catch(function(){});
+    } else if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        toast("Copied — paste it to hedwig");
+      }, function(){ fallbackCopy(text); });
+    } else { fallbackCopy(text); }
+  };
+  function fallbackCopy(text){
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); toast("Copied — paste it to hedwig"); }
+    catch(e){ toast("Copy failed — long-press to copy"); }
+    document.body.removeChild(ta);
+  }
+
+  /* ---------- barcode scanning ---------- */
+  var scanModal = $("scanModal"), scanReader = $("reader"),
+      scanResult = $("scanResult"), scanStatus = $("scanStatus");
+  var qrObj = null, qrRunning = false, libPromise = null;
+  var scanQty = 1, scanMacros = null, scanName = "";
+
+  function loadScanLib(){
+    if(window.Html5Qrcode) return Promise.resolve();
+    if(libPromise) return libPromise;
+    libPromise = new Promise(function(res, rej){
+      var s = document.createElement("script");
+      s.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
+      s.onload = function(){ res(); };
+      s.onerror = function(){ rej(new Error("lib")); };
+      document.head.appendChild(s);
+    });
+    return libPromise;
+  }
+
+  $("scanBtn").onclick = function(){ openScanner(); };
+  $("scanClose").onclick = function(){ closeScanner(); };
+
+  function openScanner(){
+    $("sheetTitle").textContent = "Scan barcode";
+    scanModal.style.display = "flex";
+    scanResult.style.display = "none";
+    scanReader.style.display = "";
+    scanStatus.textContent = "Loading camera…";
+    loadScanLib().then(startLive).catch(function(){
+      scanStatus.textContent = "Couldn't load the scanner — try the photo option below.";
+    });
+  }
+  function closeScanner(){ stopLive(); scanModal.style.display = "none"; }
+
+  function startLive(){
+    stopLive();
+    var formats = null;
+    try{
+      formats = [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.ITF, Html5QrcodeSupportedFormats.QR_CODE ];
+    }catch(e){ formats = null; }
+    qrObj = new Html5Qrcode("reader");
+    qrRunning = true;
+    var cfg = { fps: 10, qrbox: { width: 260, height: 160 } };
+    if(formats) cfg.formatsToSupport = formats;
+    scanStatus.textContent = "Point at the barcode";
+    qrObj.start({ facingMode: "environment" }, cfg,
+      function(text){ onBarcode(text); }, function(){}
+    ).catch(function(){
+      qrRunning = false;
+      scanStatus.textContent = "Camera blocked — use the photo option below.";
+    });
+  }
+  function stopLive(){
+    if(qrObj && qrRunning){
+      qrRunning = false;
+      var q = qrObj;
+      q.stop().then(function(){ try{ q.clear(); }catch(e){} }).catch(function(){});
+    }
+    qrObj = null;
+  }
+
+  $("scanFile").addEventListener("change", function(){
+    var f = $("scanFile").files[0];
+    if(!f) return;
+    scanStatus.textContent = "Reading photo…";
+    loadScanLib().then(function(){
+      var q = new Html5Qrcode("reader");
+      q.scanFile(f, true).then(function(text){ onBarcode(text); })
+       .catch(function(){ scanStatus.textContent = "No barcode found in that photo."; });
+    }).catch(function(){ scanStatus.textContent = "Couldn't load the scanner."; });
+    $("scanFile").value = "";
+  });
+
+  function onBarcode(code){
+    stopLive();
+    scanReader.style.display = "none";
+    scanResult.style.display = "";
+    scanResult.innerHTML = '<div class="spin"></div><div style="color:var(--dim);font-size:13px;margin-top:8px;text-align:center">Looking up barcode…</div>';
+    fetch("https://world.openfoodfacts.org/api/v0/product/" + encodeURIComponent(code) + ".json")
+      .then(function(r){ return r.json(); })
+      .then(function(d){ renderProduct(d, code); })
+      .catch(function(){ renderProduct(null, code); });
+  }
+
+  function r1(x){ return Math.round((+x || 0) * 10) / 10; }
+
+  function renderProduct(d, code){
+    scanQty = 1; scanMacros = null;
+    if(d && d.status === 1 && d.product){
+      var p = d.product, n = p.nutriments || {};
+      scanName = p.product_name || "Scanned item";
+      var per = null, unit = "";
+      if(n["energy-kcal_serving"] != null){
+        per = { cal:n["energy-kcal_serving"], pro:n.proteins_serving,
+                carb:n.carbohydrates_serving, fat:n.fat_serving };
+        unit = p.serving_size ? "per serving (" + p.serving_size + ")" : "per serving";
+      } else if(n["energy-kcal_100g"] != null){
+        per = { cal:n["energy-kcal_100g"], pro:n.proteins_100g,
+                carb:n.carbohydrates_100g, fat:n.fat_100g };
+        unit = "per 100g";
+      }
+      if(!per){ renderManual(code); return; }
+      scanMacros = per;
+      scanResult.innerHTML =
+        '<div class="pname">' + esc(scanName) + '</div>' +
+        '<div class="punit">' + esc(unit) + '</div>' +
+        '<div class="pmacros" id="scanMacrosTxt"></div>' +
+        '<div class="qtyrow"><button id="qMinus">−</button><div id="qVal">1</div><button id="qPlus">+</button></div>' +
+        '<button class="btn btn-add" id="scanAdd">Add to log</button>' +
+        '<button class="btn btn-share" id="scanManual" style="margin-top:8px">Enter manually instead</button>';
+      updateScanMacros();
+      $("qMinus").onclick = function(){ if(scanQty > 0.5){ scanQty = r1(scanQty - 0.5); updateScanMacros(); } };
+      $("qPlus").onclick = function(){ scanQty = r1(scanQty + 0.5); updateScanMacros(); };
+      $("scanAdd").onclick = function(){
+        addEntry(scanName, scanMacros.cal * scanQty, scanMacros.pro * scanQty,
+                 scanMacros.carb * scanQty, scanMacros.fat * scanQty);
+        closeScanner();
+      };
+      $("scanManual").onclick = function(){ renderManual(code); };
+    } else {
+      renderManual(code);
+    }
+  }
+
+  function updateScanMacros(){
+    $("qVal").textContent = scanQty;
+    $("scanMacrosTxt").textContent =
+      Math.round(scanMacros.cal * scanQty) + " cal · " +
+      r1(scanMacros.pro * scanQty) + "p / " +
+      r1(scanMacros.carb * scanQty) + "c / " +
+      r1(scanMacros.fat * scanQty) + "f";
+  }
+
+  function renderManual(code){
+    scanResult.innerHTML =
+      '<div class="pname">Not in the database</div>' +
+      '<div class="punit">Barcode ' + esc(code) + ' has no nutrition listed.<br>Type the macros into the main form and hit Add.</div>' +
+      '<button class="btn btn-share" id="scanBack">Back to scanner</button>';
+    $("scanBack").onclick = function(){ openScanner(); };
+  }
+
+  /* ---------- AI photo macros (Gemini) ---------- */
+  $("aiBtn").onclick = function(){
+    var key = (db.settings && db.settings.geminiKey) || "";
+    if(!key){
+      toast("Add your free Gemini key in settings first");
+      $("settingsDetails").open = true;
+      setTimeout(function(){ $("sKey").focus(); }, 350);
+      return;
+    }
+    $("aiFile").click();
+  };
+  $("saveKey").onclick = function(){
+    db.settings = db.settings || {};
+    db.settings.geminiKey = $("sKey").value.trim();
+    save(db); toast("Key saved ✓");
+  };
+  $("aiFile").addEventListener("change", function(){
+    var f = $("aiFile").files[0];
+    $("aiFile").value = "";
+    if(!f) return;
+    openAiModal();
+    fileToJpeg(f, 1024).then(analyzePhoto).then(function(res){
+      if(!res.ok) throw new Error((res.j && res.j.error && res.j.error.message) || "API error " + res.status);
+      var parts = res.j.candidates && res.j.candidates[0] && res.j.candidates[0].content.parts || [];
+      var txt = parts.map(function(p){ return p.text || ""; }).join("")
+                     .replace(/^```json\s*/, "").replace(/```\s*$/, "").trim();
+      renderAiResult(JSON.parse(txt));
+    }).catch(function(err){
+      aiStatus("Failed: " + (err && err.message ? err.message : "unknown error"));
+    });
+  });
+
+  function openAiModal(){
+    stopLive();
+    $("sheetTitle").textContent = "AI photo macros";
+    scanModal.style.display = "flex";
+    scanReader.style.display = "none";
+    scanResult.style.display = "";
+    scanResult.innerHTML = '<div class="spin"></div><div style="color:var(--dim);font-size:13px;margin-top:8px;text-align:center">Analyzing photo…</div>';
+  }
+  function aiStatus(msg){
+    scanResult.innerHTML = '<div class="punit" style="margin-top:14px">' + esc(msg) + '</div>' +
+      '<button class="btn btn-share" id="aiRetry">Try again</button>';
+    $("aiRetry").onclick = function(){ closeScanner(); $("aiBtn").click(); };
+  }
+
+  function fileToJpeg(file, maxDim){
+    return new Promise(function(res, rej){
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function(){
+        try{
+          var s = Math.min(1, maxDim / Math.max(img.width, img.height));
+          var c = document.createElement("canvas");
+          c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          URL.revokeObjectURL(url);
+          res(c.toDataURL("image/jpeg", 0.85).split(",")[1]);
+        }catch(e){ rej(e); }
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); rej(new Error("bad image")); };
+      img.src = url;
+    });
+  }
+
+  function analyzePhoto(b64){
+    var key = db.settings.geminiKey;
+    var schema = { type:"object", properties:{
+        items:{ type:"array", items:{ type:"object", properties:{
+          name:{ type:"string" }, portion:{ type:"string" },
+          calories:{ type:"number" }, protein_g:{ type:"number" },
+          carbs_g:{ type:"number" }, fat_g:{ type:"number" } },
+          required:["name","calories","protein_g","carbs_g","fat_g"] } },
+        totals:{ type:"object", properties:{
+          calories:{ type:"number" }, protein_g:{ type:"number" },
+          carbs_g:{ type:"number" }, fat_g:{ type:"number" } },
+          required:["calories","protein_g","carbs_g","fat_g"] }
+      }, required:["items","totals"] };
+    var body = {
+      contents:[{ parts:[
+        { text:"You are a nutrition estimator. Analyze this food photo: identify each distinct food item and estimate realistic macros for the portions shown. Round numbers sensibly. Return ONLY the JSON object." },
+        { inline_data:{ mime_type:"image/jpeg", data:b64 } }
+      ]}],
+      generationConfig:{ response_mime_type:"application/json", response_schema:schema }
+    };
+    return fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + encodeURIComponent(key), {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(body)
+    }).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, status:r.status, j:j }; }); });
+  }
+
+  function renderAiResult(d){
+    if(!d || !d.totals){ aiStatus("Couldn't read that photo — try again."); return; }
+    var t = d.totals, items = d.items || [];
+    var name = items.length === 1 ? items[0].name :
+               items.length > 1 ? "Photo meal (" + items.length + " items)" : "Photo meal";
+    var rows = items.map(function(it){
+      return '<div class="airow"><div><b>' + esc(it.name) + '</b>' +
+        (it.portion ? ' <span style="color:var(--dim)">· ' + esc(it.portion) + '</span>' : '') +
+        '</div><div class="aimk">' + Math.round(it.calories) + ' cal · ' +
+        r1(it.protein_g) + 'p / ' + r1(it.carbs_g) + 'c / ' + r1(it.fat_g) + 'f</div></div>';
+    }).join("");
+    scanResult.innerHTML =
+      '<div class="pname">' + esc(name) + '</div>' +
+      '<div class="punit">AI estimate — rough, not exact</div>' + rows +
+      '<div class="pmacros">Total: ' + Math.round(t.calories) + ' cal · ' +
+        r1(t.protein_g) + 'p / ' + r1(t.carbs_g) + 'c / ' + r1(t.fat_g) + 'f</div>' +
+      '<button class="btn btn-add" id="aiAdd">Add to log</button>' +
+      '<button class="btn btn-share" id="aiClose" style="margin-top:8px">Discard</button>';
+    $("aiAdd").onclick = function(){
+      addEntry(name, t.calories, t.protein_g, t.carbs_g, t.fat_g);
+      closeScanner();
+    };
+    $("aiClose").onclick = function(){ closeScanner(); };
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
